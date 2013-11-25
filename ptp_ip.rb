@@ -33,13 +33,13 @@ class PTPIP_packet
         
         if data then
     
-            @length = parse_length data
+            @length = PTPIP_packet.parse_length data
             
             #print @length, " < length\n"###
             
             raise "Invalid Data : length is invalid" if @length != data.length
             
-            @type = parse_type data
+            @type = PTPIP_packet.parse_type data
                     
             #print @type, " < type\n"###
             #print PTP_PACKT_TYPE_STRING[@type], " < type\n"

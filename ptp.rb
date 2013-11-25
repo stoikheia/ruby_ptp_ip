@@ -261,15 +261,8 @@ def PTP_parse_long(offset, data)
     return data[offset..offset+3].pack("C*").unpack("L")[0], offset+4
 end
 def PTP_parse_string(offset, data)
-    i = offset
-    until data[i] == 0 && data[i+1] == 0 do
-        i+=2
-    end
-    if i == offset then
-        return "", i+2
-    else
-        return data[offset..i-1].pack("C*").unpack("S*").pack("U*"), i+2
-    end
+    num = data[offset]
+    return data[offset+1..offset+(num-1)*2].pack("C*").unpack("S*").pack("U*"), offset+num*2+1
 end
 
 def PTP_parse_short_array(offset, data)
