@@ -204,10 +204,10 @@ PTP_WB_Tungsten = 0x0006
 PTP_WB_Flush = 0x0007
 
 #focus mode
-PTP_FM_Undefined = 0x0000
-PTP_FM_Manual = 0x0001
-PTP_FM_Automatic = 0x0002
-PTP_FM_AutomaticMacro = 0x0003
+PTP_FCM_Undefined = 0x0000
+PTP_FCM_Manual = 0x0001
+PTP_FCM_Automatic = 0x0002
+PTP_FCM_AutomaticMacro = 0x0003
 
 #exposure metering mode
 PTP_EMM_Undefined = 0x0000
@@ -216,14 +216,14 @@ PTP_EMM_CenterWeightedAvarage = 0x0002
 PTP_EMM_MultiSpot = 0x0003
 PTP_EMM_CenterSpot = 0x0004
 
-#flasu mode
-PTP_FM_Undefined = 0x0000
-PTP_FM_AutoFlash = 0x0001
-PTP_FM_FlashOff = 0x0002
-PTP_FM_FillFlash = 0x0003
-PTP_FM_RedEyeAuto = 0x0004
-PTP_FM_RedEyeFill = 0x0005
-PTP_FM_ExternalSync = 0x0006
+#flash mode
+PTP_FLM_Undefined = 0x0000
+PTP_FLM_AutoFlash = 0x0001
+PTP_FLM_FlashOff = 0x0002
+PTP_FLM_FillFlash = 0x0003
+PTP_FLM_RedEyeAuto = 0x0004
+PTP_FLM_RedEyeFill = 0x0005
+PTP_FLM_ExternalSync = 0x0006
 
 #exposure program mode
 PTP_EPM_Undefined = 0x0000
@@ -253,10 +253,51 @@ PTP_FMM_CenterSpot = 0x0001
 PTP_FMM_MultiSpot = 0x0002
 
 
+#utilities
+def PTP_parse_short(offset, data)
+    return data[offset..offset+1].pack("C*").unpack("S")[0], offset+2
+end
+def PTP_parse_long(offset, data)
+    return data[offset..offset+3].pack("C*").unpack("L")[0], offset+4
+end
+def PTP_parse_string(offset, data)
+    i = offset
+    until data[i] == 0 && data[i+1] == 0 do
+        i+=2
+    end
+    if i == offset then
+        return "", i+2
+    else
+        return data[offset..i-1].pack("C*").unpack("S*").pack("U*"), i+2
+    end
+end
+
+def PTP_parse_short_array(offset, data)
+    ret = []
+    num, start = PTP_parse_long(offset, data)
+    num.times do
+        s, start = PTP_parse_short(start, data)
+        ret << s
+    end
+    return ret, start
+end
+
+def PTP_parse_long_array(offset, data)
+    ret = []
+    num, start = PTP_parse_long(offset, data)
+    num.times do
+        s, start = PTP_parse_long(start, data)
+        ret << s
+    end
+    return ret, start
+end
+
 class PTP_DeviceInfo
+    
+    attr_accessor :standard_version, :vender_extension_id, :vender_extension_version, :vender_extention_desc, :functional_mode, :operations_supported, :events_supported, :device_properties_supported, :capture_formats, :image_formats, :manufacturer, :model, :device_version, :serial_number
 
     def initialize()
-        @standard_varsion = 0
+        @standard_version = 0
         @vender_extension_id = 0
         @vender_extension_version = 0
         @vender_extention_desc = ""
@@ -272,8 +313,30 @@ class PTP_DeviceInfo
         @serial_number = ""
     end
 
+    class << self
+        def create(data)
+            info = new()
+            offset = 0
+            info.standard_version, offset = PTP_parse_short(offset, data)
+            info.vender_extension_id, offset = PTP_parse_long(offset, data)
+            info.vender_extension_version, offset = PTP_parse_short(offset, data)
+            info.vender_extention_desc, offset = PTP_parse_string(offset, data)
+            info.functional_mode, offset = PTP_parse_short(offset, data)
+            info.operations_supported, offset = PTP_parse_short_array(offset, data)
+            info.events_supported, offset = PTP_parse_short_array(offset, data)
+            info.device_properties_supported, offset = PTP_parse_short_array(offset, data)
+            info.capture_formats, offset = PTP_parse_short_array(offset, data)
+            info.image_formats, offset = PTP_parse_short_array(offset, data)
+            info.manufacturer, offset = PTP_parse_string(offset, data)
+            info.model, offset = PTP_parse_string(offset, data)
+            info.device_version, offset = PTP_parse_string(offset, data)
+            info.serial_number, offset = PTP_parse_string(offset, data)
+            return info
+        end
+    end
+
     def to_data
-        [@standard_varsion].pack("S").unpack("C*")+
+        [@standard_version].pack("S").unpack("C*")+
         [@vender_extension_id].pack("L").unpack("C*")+
         [@vender_extension_version].pack("S").unpack("C*")+
         
@@ -317,7 +380,7 @@ class PTP_DeviceInfo
     
     def to_hash
         {
-        :standard_varsion => @standard_varsion,
+        :standard_version => @standard_version,
         :vender_extension_id => @vender_extension_id,
         :vender_extension_version => @vender_extension_version,
         :vender_extention_desc => @vender_extention_desc,

@@ -16,26 +16,6 @@ PTPIP_PT_EndDataPacket = 0x0000000C
 PTPIP_PT_ProbeRequestPacket = 0x0000000D
 PTPIP_PT_ProbeResponsePacket = 0x0000000E
 
-PTPIP_PACKT_TYPE_STRING = [
-    "INVALID_VALUE",        # => 0x00000000,
-    "INIT_CMD_REQ_PKT",     # => 0x00000001,
-    "INIT_CMD_ACK",         # => 0x00000002,
-    "INIT_EVENT_REQ_PKT",   # => 0x00000003,
-    "INIT_EVENT_ACK_PKT",   # => 0x00000004,
-    "INIT_FAIL_PKT",        # => 0x00000005,
-    "OPERATION_REQ_PKT",    # => 0x00000006,
-    "OPERATION_RES_PKT",    # => 0x00000007,
-    "EVENT_PKT",            # => 0x00000008,
-    "START_DATA_PKT",       # => 0x00000009,
-    "DATA_PKT",             # => 0x0000000A,
-    "CANCEL_PKT",           # => 0x0000000B,
-    "END_DATA_PKT",         # => 0x0000000C,
-    "PROBE_REQ_PKT",        # => 0x0000000D,
-    "PROBE_RES_PKT",        # => 0x0000000E,
-    "RESERVED_MIN",         # => 0x0000000F,
-]
-
-
 
 
 class PTPIP_packet
@@ -68,29 +48,29 @@ class PTPIP_packet
             when PTPIP_PT_InvalidValue
                 raise "Invalid Data : type is invalid"
             when PTPIP_PT_IniCommandRequestPacket
-                @payload = PTPIP_payload_INIT_CMD_PKT.new(data[8..-1])
+                @payload = PTPIP_payload_INIT_CMD_PKT.create(data[8..-1])
             when PTPIP_PT_InitCommandAck
-                @payload = PTPIP_payload_INIT_CMD_ACK.new(data[8..-1])
+                @payload = PTPIP_payload_INIT_CMD_ACK.create(data[8..-1])
             when PTPIP_PT_InitEventRequestPacket
-                @payload = PTPIP_payload_INIT_EVENT_REQ_PKT.new(data[8..-1])
+                @payload = PTPIP_payload_INIT_EVENT_REQ_PKT.create(data[8..-1])
             when PTPIP_PT_InitEventAckPacket
-                @payload = PTPIP_payload_INIT_EVENT_ACK_PKT.new()
+                @payload = PTPIP_payload_INIT_EVENT_ACK_PKT.create(nil)
             when PTPIP_PT_InitFailPacket
-                @payload = PTPIP_payload_INIT_FAIL_PKT.new(data[8..-1])
+                @payload = PTPIP_payload_INIT_FAIL_PKT.create(data[8..-1])
             when PTPIP_PT_OperationRequestPacket
-                @payload = PTPIP_payload_OPERATION_REQ_PKT.new(data[8..-1])
+                @payload = PTPIP_payload_OPERATION_REQ_PKT.create(data[8..-1])
             when PTPIP_PT_OperationResponsePacket
-                @payload = PTPIP_payload_OPERATION_RES_PKT.new(data[8..-1])
+                @payload = PTPIP_payload_OPERATION_RES_PKT.create(data[8..-1])
             when PTPIP_PT_EventPacket
-                @payload = PTPIP_payload_EVENT_PKT.new(data[8..-1])
+                @payload = PTPIP_payload_EVENT_PKT.create(data[8..-1])
             when PTPIP_PT_StartDataPacket
-                @payload = PTPIP_payload_START_DATA_PKT.new(data[8..-1])
+                @payload = PTPIP_payload_START_DATA_PKT.create(data[8..-1])
             when PTPIP_PT_DataPacket
-                @payload = PTPIP_payload_DATA_PKT.new(data[8..-1])
+                @payload = PTPIP_payload_DATA_PKT.create(data[8..-1])
             when PTPIP_PT_CancelPacket
-                @payload = PTPIP_payload_CANCEL_PKT.new(data[8..-1])
+                @payload = PTPIP_payload_CANCEL_PKT.create(data[8..-1])
             when PTPIP_PT_EndDataPacket
-                @payload = PTPIP_payload_END_DATA_PKT.new(data[8..-1])
+                @payload = PTPIP_payload_END_DATA_PKT.create(data[8..-1])
             when PTPIP_PT_ProbeRequestPacket
                 @payload = nil
             when PTPIP_PT_ProbeResponsePacket
@@ -105,6 +85,11 @@ class PTPIP_packet
         
     end
     
+    def self.completed_data?(data)
+        return false if data.length < 4
+        return data.length == parse_length(data)
+    end
+    
     def self.create(payload)
         packet = self.new()
         packet.length = 4 + 4 + payload.to_data.length
@@ -113,12 +98,12 @@ class PTPIP_packet
         return packet
     end
     
-    def parse_length(data)
+    def self.parse_length(data)
         raise "Invalid Data : length" if data.length < 4
         return data[0..3].pack("C*").unpack("L")[0];
     end
     
-    def parse_type(data)
+    def self.parse_type(data)
         raise "Invalid Data : type" if data.length < 8
         return data[4..7].pack("C*").unpack("L")[0];
     end
@@ -177,7 +162,7 @@ class PTPIP_payload_INIT_CMD_PKT < PTPIP_payload
     attr_accessor :protocol_version
     
 
-    def initialize(data = nil)
+    def initialize()
     
         @type = PTPIP_PT_IniCommandRequestPacket
         #initiator information
@@ -185,32 +170,37 @@ class PTPIP_payload_INIT_CMD_PKT < PTPIP_payload
         @friendly_name = nil
         @protocol_version = 0
         
-        if data
-            @guid = parse_guid(data)
-            @friendly_name = parse_friendly_name(data)
-            @protocol_version = parse_protocol_version(data)
-        end       
     end
     
-    def parse_guid(data)
-        raise "Invalid Data : guid" if data.length < 16
-        return data[0..15];
-    end
-    
-    def parse_friendly_name(data)#ignore null terminate
-        raise "Invalid Data : friendly name" if data.length < 20
-        return data[16..-6].pack("C*").unpack("S*").pack("U*");
-    end
-    
-    def parse_protocol_version(data)
-        raise "Invalid Data : protocol version" if data.length < 20
-        return data[-4..-1].pack("C*").unpack("L")[0];
+    class << self
+        def create(data)
+            payload = new()
+            payload.guid = parse_guid(data)
+            payload.friendly_name = parse_friendly_name(data)
+            payload.protocol_version = parse_protocol_version(data)
+            return payload
+        end
+        
+        def parse_guid(data)
+            raise "Invalid Data : guid" if data.length < 16
+            return data[0..15];
+        end
+        
+        def parse_friendly_name(data)#ignore null terminate
+            raise "Invalid Data : friendly name" if data.length < 20
+            return data[16..-6].pack("C*").unpack("S*").pack("U*");
+        end
+        
+        def parse_protocol_version(data)
+            raise "Invalid Data : protocol version" if data.length < 20
+            return data[-4..-1].pack("C*").unpack("L")[0];
+        end
     end
      
     def to_data
         @guid+
         @friendly_name.unpack("U*").pack("S*").unpack("C*")+
-        "\0".unpack("U*").pack("S*").unpack("C*")
+        "\0".unpack("U*").pack("S*").unpack("C*") +
         [@protocol_version].pack("L").unpack("C*")
     end
     
@@ -232,7 +222,7 @@ class PTPIP_payload_INIT_CMD_ACK < PTPIP_payload
     attr_accessor :protocol_version
 
     
-    def initialize(data = nil)
+    def initialize()
     
         @type = PTPIP_PT_InitCommandAck
         #responder information
@@ -240,9 +230,34 @@ class PTPIP_payload_INIT_CMD_ACK < PTPIP_payload
         @guid = nil
         @friendly_name = nil
         @protocol_version = 0
+    end
+    
+    class << self
+        def create(data)
+            payload = new()
+            payload.guid = parse_guid data
+            payload.conn_number = parse_conn_number data
+            payload.friendly_name = parse_friendly_name data
+            payload.protocol_version = parse_protocol_version data
+            return payload
+        end
         
-        if data then
-            raise "not impliment"###TODO
+        def parse_conn_number(data)
+            raise "Invalid Data : connection number" if data.length < 4
+            return data[0..3].pack("C*").unpack("L")[0];
+        end
+        
+        def parse_guid(data)
+            raise "Invalid Data : guid" if data.length < 20
+            return data[4..19];
+        end
+        
+        def parse_friendly_name(data)#ignore null terminate
+            return data[20..-6].pack("C*").unpack("S*").pack("U*");
+        end
+        
+        def parse_protocol_version(data)
+            return data[-4..-1].pack("C*").unpack("L")[0];
         end
     end
     
@@ -271,18 +286,22 @@ class PTPIP_payload_INIT_EVENT_REQ_PKT < PTPIP_payload
         
     attr_accessor :conn_number
     
-    def initialize(data = nil)
+    def initialize()
         @type = PTPIP_PT_InitEventRequestPacket
         @conn_number = 0
-        
-        if data then
-            @conn_number = parse_conn_number(data)
-        end
     end
     
-    def parse_conn_number(data)
-        raise "Invalid Data : connection_number" if data.length < 4
-        return data[0..3].pack("C*").unpack("L")[0];
+    class << self
+        def create(data)
+            payload = new()
+            payload.conn_number = parse_conn_number(data)
+            return payload
+        end
+        
+        def parse_conn_number(data)
+            raise "Invalid Data : connection_number" if data.length < 4
+            return data[0..3].pack("C*").unpack("L")[0];
+        end
     end
     
     def to_data
@@ -301,6 +320,12 @@ class PTPIP_payload_INIT_EVENT_ACK_PKT < PTPIP_payload
             
     def initialize()
         @type = PTPIP_PT_InitEventAckPacket
+    end
+    
+    class << self
+        def create(data)
+            payload = new()
+        end
     end
     
     def to_data
@@ -323,18 +348,21 @@ class PTPIP_payload_INIT_FAIL_PKT < PTPIP_payload
     
     attr_accessor :reason
     
-    def initialize(data = nil)
+    def initialize()
         @type = PTPIP_PT_InitFailPacket
         @reason = 0
-        
-        if data then
-            @reason = parse_reason(data)
-        end
     end
     
-    def parse_reason(data)
-        raise "Invalid Data : reason" if data.length < 4
-        return data[0..3].pack("C*").unpack("L")[0];
+    class << self
+        def create(data)
+            payload = new()
+            payload.reason = parse_reason(data)
+        end
+        
+        def parse_reason(data)
+            raise "Invalid Data : reason" if data.length < 4
+            return data[0..3].pack("C*").unpack("L")[0];
+        end
     end
     
     def to_data
@@ -361,39 +389,43 @@ class PTPIP_payload_OPERATION_REQ_PKT < PTPIP_payload
     attr_accessor :transaction_id
     attr_accessor :parameters
     
-    def initialize(data = nil)
+    def initialize()
         @type = PTPIP_PT_OperationRequestPacket
         @data_phase_info = 0
         @operation_code = 0
         @transaction_id = 0
         @parameters = []
-        
-        if data then
-            @data_phase_info = parse_data_phase_info(data)
-            @operation_code = parse_operation_code(data)
-            @transaction_id = parse_transaction_id(data)
-            @parameters = parse_parameters(data)
+    end
+    
+    class << self
+        def create(data)
+            payload = new()
+            payload.data_phase_info = parse_data_phase_info(data)
+            payload.operation_code = parse_operation_code(data)
+            payload.transaction_id = parse_transaction_id(data)
+            payload.parameters = parse_parameters(data)
+            return payload
         end
-    end
-    
-    def parse_data_phase_info(data)
-        raise "Invalid Data : parse_data_phase_info" if data.length < 4
-        return data[0..3].pack("C*").unpack("L")[0];
-    end
-    
-    def parse_operation_code(data)
-        raise "Invalid Data : operation_code" if data.length < 6
-        return data[4..5].pack("C*").unpack("S")[0];
-    end
-    
-    def parse_transaction_id(data)
-        raise "Invalid Data : transaction_id" if data.length < 10
-        return data[6..9].pack("C*").unpack("L")[0];
-    end
-    
-    def parse_parameters(data)
-        raise "Invalid Data : parameters" if data.length > 30
-        return data[10..-1].pack("C*").unpack("L*");
+        
+        def parse_data_phase_info(data)
+            raise "Invalid Data : parse_data_phase_info" if data.length < 4
+            return data[0..3].pack("C*").unpack("L")[0];
+        end
+        
+        def parse_operation_code(data)
+            raise "Invalid Data : operation_code" if data.length < 6
+            return data[4..5].pack("C*").unpack("S")[0];
+        end
+        
+        def parse_transaction_id(data)
+            raise "Invalid Data : transaction_id" if data.length < 10
+            return data[6..9].pack("C*").unpack("L")[0];
+        end
+        
+        def parse_parameters(data)
+            raise "Invalid Data : parameters" if data.length > 30
+            return data[10..-1].pack("C*").unpack("L*");
+        end
     end
     
     def to_data
@@ -420,32 +452,37 @@ class PTPIP_payload_OPERATION_RES_PKT < PTPIP_payload
     attr_accessor :transaction_id
     attr_accessor :parameters
     
-    def initialize(data = nil)
+    def initialize()
         @type = PTPIP_PT_OperationResponsePacket
         @response_code = 0
         @transaction_id = 0
         @parameters = []
         
-        if data then
-            @response_code = parse_response_code(data)
-            @transaction_id = parse_transaction_id(data)
-            @parameters = parse_parameters(data)
+    end
+    
+    class << self
+        def create(data)
+            payload = new()
+            payload.response_code = parse_response_code(data)
+            payload.transaction_id = parse_transaction_id(data)
+            payload.parameters = parse_parameters(data)
+            return payload
         end
-    end
-    
-    def parse_response_code(data)
-        raise "Invalid Data : parse_response_code" if data.length < 4
-        return data[0..3].pack("C*").unpack("S")[0];
-    end
-    
-    def parse_transaction_id(data)
-        raise "Invalid Data : transaction_id" if data.length < 8
-        return data[4..7].pack("C*").unpack("L")[0];
-    end
-    
-    def parse_parameters(data)
-        raise "Invalid Data : parameters" if data.length > 26
-        return data[8..-1].pack("C*").unpack("L*");
+        
+        def parse_response_code(data)
+            raise "Invalid Data : parse_response_code" if data.length < 4
+            return data[0..3].pack("C*").unpack("S")[0];
+        end
+        
+        def parse_transaction_id(data)
+            raise "Invalid Data : transaction_id" if data.length < 8
+            return data[4..7].pack("C*").unpack("L")[0];
+        end
+        
+        def parse_parameters(data)
+            raise "Invalid Data : parameters" if data.length > 26
+            return data[8..-1].pack("C*").unpack("L*");
+        end
     end
     
     def to_data
@@ -471,32 +508,36 @@ class PTPIP_payload_EVENT_PKT < PTPIP_payload
     attr_accessor :transaction_id
     attr_accessor :parameters
     
-    def initialize(data = nil)
+    def initialize()
         @type = PTPIP_PT_EventPacket
         @event_code = 0
         @transaction_id = 0
         @parameters = []
-        
-        if data then
-            @event_code = parse_event_code(data)
-            @transaction_id = parse_transaction_id(data)
-            @parameters = parse_parameters(data)
+    end
+    
+    class << self
+        def create(data)
+            payload = new()
+            payload.event_code = parse_event_code(data)
+            payload.transaction_id = parse_transaction_id(data)
+            payload.parameters = parse_parameters(data)
+            return payload
         end
-    end
-    
-    def parse_event_code(data)
-        raise "Invalid Data : parse_event_code" if data.length < 4
-        return data[0..3].pack("C*").unpack("S")[0];
-    end
-    
-    def parse_transaction_id(data)
-        raise "Invalid Data : transaction_id" if data.length < 8
-        return data[4..7].pack("C*").unpack("L")[0];
-    end
-    
-    def parse_parameters(data)
-        raise "Invalid Data : parameters" if data.length > 18
-        return data[8..-1].pack("C*").unpack("L*");
+        
+        def parse_event_code(data)
+            raise "Invalid Data : parse_event_code" if data.length < 4
+            return data[0..3].pack("C*").unpack("S")[0];
+        end
+        
+        def parse_transaction_id(data)
+            raise "Invalid Data : transaction_id" if data.length < 8
+            return data[4..7].pack("C*").unpack("L")[0];
+        end
+        
+        def parse_parameters(data)
+            raise "Invalid Data : parameters" if data.length > 18
+            return data[8..-1].pack("C*").unpack("L*");
+        end
     end
     
     def to_data
@@ -521,35 +562,38 @@ class PTPIP_payload_START_DATA_PKT < PTPIP_payload
     attr_accessor :total_data_length_low
     attr_accessor :total_data_length_high
     
-    def initialize(data = nil)
+    def initialize()
         @type = PTPIP_PT_StartDataPacket
         @transaction_id = 0
         @total_data_length_low = 0
         @total_data_length_high = 0
+    end
+    
+    class << self
+        def create(data)
+            payload = new()
+            payload.transaction_id = parse_transaction_id(data)
+            payload.total_data_length_low = parse_total_data_length_low(data)
+            payload.total_data_length_high = parse_total_data_length_high(data)
+            return payload
+        end
         
-        if data then
-            @transaction_id = parse_transaction_id(data)
-            @total_data_length_low = parse_total_data_length_low(data)
-            @total_data_length_high = parse_total_data_length_high(data)
+        def parse_transaction_id(data)
+            raise "Invalid Data : transaction_id" if data.length < 4
+            return data[0..3].pack("C*").unpack("L")[0];
+        end
+
+        
+        def parse_total_data_length_low(data)
+            raise "Invalid Data : total_data_length_low" if data.length < 12
+            return data[4..7].pack("C*").unpack("L")[0];
+        end
+        
+        def parse_total_data_length_high(data)
+            raise "Invalid Data : total_data_length_high" if data.length < 12
+            return data[8..11].pack("C*").unpack("L")[0];
         end
     end
-    
-    def parse_transaction_id(data)
-        raise "Invalid Data : transaction_id" if data.length < 4
-        return data[0..3].pack("C*").unpack("L")[0];
-    end
-
-    
-    def parse_total_data_length_low(data)
-        raise "Invalid Data : total_data_length_low" if data.length < 12
-        return data[4..7].pack("C*").unpack("L")[0];
-    end
-    
-    def parse_total_data_length_high(data)
-        raise "Invalid Data : total_data_length_high" if data.length < 12
-        return data[8..11].pack("C*").unpack("L")[0];
-    end
-    
     
     def to_data
         [@transaction_id].pack("L").unpack("C*")+
@@ -572,25 +616,29 @@ class PTPIP_payload_DATA_PKT < PTPIP_payload
     attr_accessor :transaction_id
     attr_accessor :data_payload
     
-    def initialize(data = nil)
+    def initialize()
         @type = PTPIP_PT_DataPacket
         @transaction_id = 0
         @data_payload = []
-        
-        if data then
-            @transaction_id = parse_transaction_id(data)
-            @data_payload = parse_data_payload(data)
+    end
+    
+    class << self
+        def create(data)
+            payload = new()
+            payload.transaction_id = parse_transaction_id(data)
+            payload.data_payload = parse_data_payload(data)
+            return payload
         end
-    end
-    
-    def parse_transaction_id(data)
-        raise "Invalid Data : transaction_id" if data.length < 4
-        return data[0..3].pack("C*").unpack("L")[0];
-    end
+        
+        def parse_transaction_id(data)
+            raise "Invalid Data : transaction_id" if data.length < 4
+            return data[0..3].pack("C*").unpack("L")[0];
+        end
 
-    
-    def parse_data_payload(data)
-        return data[4..-1];
+        
+        def parse_data_payload(data)
+            return data[4..-1];
+        end
     end
     
     def to_data
@@ -611,18 +659,22 @@ class PTPIP_payload_CANCEL_PKT < PTPIP_payload
     
     attr_accessor :transaction_id
     
-    def initialize(data = nil)
+    def initialize()
         @type = PTPIP_PT_CancelPacket
         @transaction_id = 0
-        
-        if data then
-            @transaction_id = parse_transaction_id(data)
-        end
     end
     
-    def parse_transaction_id(data)
-        raise "Invalid Data : transaction_id" if data.length < 4
-        return data[0..3].pack("C*").unpack("L")[0];
+    class << self
+        def create(data)
+            payload = new()
+            payload.transaction_id = parse_transaction_id(data)
+            return payload
+        end
+    
+        def parse_transaction_id(data)
+            raise "Invalid Data : transaction_id" if data.length < 4
+            return data[0..3].pack("C*").unpack("L")[0];
+        end
     end
 
     def to_data
@@ -639,9 +691,32 @@ end
 
 class PTPIP_payload_END_DATA_PKT < PTPIP_payload_DATA_PKT
     
-    def initialize(data = nil)
+    attr_accessor :transaction_id
+    attr_accessor :data_payload
+    
+    def initialize()
         super
         @type = PTPIP_PT_EndDataPacket
+        @transaction_id = 0
+        @data_payload = []
+    end
+    
+    class << self
+        def self.create(data)
+            payload = new()
+            payload.transaction_id = parse_transaction_id(data)
+            payload.data_payload = parse_data_payload(data)
+            return payload
+        end
+        
+        def parse_transaction_id(data)
+            raise "Invalid Data : transaction_id" if data.length < 4
+            return data[0..3].pack("C*").unpack("L")[0];
+        end
+
+        def parse_data_payload(data)
+            return data[4..-1];
+        end
     end
 end
 
