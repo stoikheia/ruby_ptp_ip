@@ -1,7 +1,7 @@
 
 #packet type
 PTPIP_PT_InvalidValue = 0x00000000
-PTPIP_PT_IniCommandRequestPacket = 0x00000001
+PTPIP_PT_InitCommandRequestPacket = 0x00000001
 PTPIP_PT_InitCommandAck = 0x00000002
 PTPIP_PT_InitEventRequestPacket = 0x00000003
 PTPIP_PT_InitEventAckPacket = 0x00000004
@@ -49,7 +49,7 @@ class PTPIP_packet
             case @type
             when PTPIP_PT_InvalidValue
                 raise "Invalid Data : type is invalid"
-            when PTPIP_PT_IniCommandRequestPacket
+            when PTPIP_PT_InitCommandRequestPacket
                 @payload = PTPIP_payload_INIT_CMD_PKT.create(data[8..-1])
             when PTPIP_PT_InitCommandAck
                 @payload = PTPIP_payload_INIT_CMD_ACK.create(data[8..-1])
@@ -166,7 +166,7 @@ class PTPIP_payload_INIT_CMD_PKT < PTPIP_payload
 
     def initialize()
     
-        @type = PTPIP_PT_IniCommandRequestPacket
+        @type = PTPIP_PT_InitCommandRequestPacket
         #initiator information
         @guid = nil
         @friendly_name = nil
