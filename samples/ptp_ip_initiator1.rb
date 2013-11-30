@@ -19,11 +19,9 @@ def str2guid(str)
     hexes = str.scan /([a-fA-F0-9]{2})-*/
     hexes.flatten!
     raise "Invalid GUID" if hexes.length != 16
-    ret = []
-    hexes.each do |hex|
-        ret << hex.hex
+    hexes.map do |s|
+        s.hex
     end
-    ret
 end
 
 def write_packet(sock, pkt)
@@ -32,9 +30,9 @@ end
 
 def read_packet(sock)
     data = []
-    until PTPIP_packet.completed_data?(data) do
-        data += sock.recv(1024).unpack("C*")
-    end
+    data += sock.read(PTPIP_packet::MIN_PACKET_SIZE).unpack("C*")
+    len = PTPIP_packet.parse_length(data)
+    data += sock.read(len-PTPIP_packet::MIN_PACKET_SIZE).unpack("C*")
     PTPIP_packet.new(data)
 end
 
@@ -102,7 +100,6 @@ end
 
 ######################################## 
 TCPSocket.open(ADDR, PORT) do |s|
-    s.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
 
     # Command Connection
     recv_pkt = init_command(s)
@@ -113,7 +110,6 @@ TCPSocket.open(ADDR, PORT) do |s|
     p @protocol_version = recv_pkt.payload.protocol_version
 
     TCPSocket.open(ADDR, PORT) do |es|
-        es.setsockopt(Socket::IPPROTO_TCP, Socket::TCP_NODELAY, 1)
 
         # Event Connection
         recv_pkt = init_event(es, @conn_number)
