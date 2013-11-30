@@ -24,7 +24,9 @@ class PTPIP_packet
     attr_accessor :length
     attr_accessor :type
     attr_accessor :payload
-        
+    
+    MIN_PACKET_SIZE = 8
+    
     def initialize(data = nil)
     
         @length = 0
