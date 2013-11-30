@@ -1,4 +1,4 @@
-#/bin/ruby
+#!/bin/ruby
 #
 # This Sample Shows DeviceInfo and Initiates Capture.
 #
