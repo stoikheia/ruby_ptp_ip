@@ -1,6 +1,7 @@
 #!/bin/ruby
 #
-# This sample demonstrates getting latest objects thumb and picture.
+# This sample demonstrates how to capture and then
+# getting the objects as thumbnail and picture.
 #
 
 require 'socket'
@@ -119,6 +120,26 @@ TCPSocket.open(ADDR, PORT) do |s|
         recv_pkt = simple_operation(s, PTP_OC_OpenSession, @transaction_id, [@session_id])
         raise "Open Session Failed #{recv_pkt.payload.response_code}" if recv_pkt.payload.response_code != PTP_RC_OK
         @transaction_id += 1
+
+        recv_pkt = simple_operation(s, PTP_OC_InitiateCapture, @transaction_id, [0,0])
+        raise "Initiate Capture Failed #{recv_pkt.payload.response_code}" if recv_pkt.payload.response_code != PTP_RC_OK
+        @transaction_id +=1
+        @event_transaction_id = recv_pkt.payload.transaction_id
+
+        print "Capturing...\r"
+
+        recv_pkt = read_packet(es)
+        raise "Invalid Event Packet" unless recv_pkt.type == PTPIP_PT_EventPacket
+        raise "Invalid Event Code" unless recv_pkt.payload.event_code == PTP_EC_ObjectAdded
+        @added_object_handle = recv_pkt.payload.parameters[0]
+
+        print "Object(#{@added_object_handle.to_s}) Added!\n"
+
+        recv_pkt = read_packet(es)
+        raise "Invalid Event Packet" unless recv_pkt.type == PTPIP_PT_EventPacket
+        raise "Invalid Event Code" unless recv_pkt.payload.event_code == PTP_EC_CaptureComplete
+
+        print "Capture Completed!\n"
         
         recv_pkt, data = data_operation(s, PTP_OC_GetObjectHandles, @transaction_id, [0xFFFFFFFF, 0xFFFFFFFF, 0])
         raise "GetObjectHandles Failed #{recv_pkt.payload.reason_code}" if recv_pkt.payload.response_code != PTP_RC_OK
@@ -128,7 +149,7 @@ TCPSocket.open(ADDR, PORT) do |s|
         @transaction_id += 1
 
         print "GetThumb...\n"
-        recv_pkt, data = data_operation(s, PTP_OC_GetThumb, @transaction_id, [@object_handles[-1]])
+        recv_pkt, data = data_operation(s, PTP_OC_GetThumb, @transaction_id, [@added_object_handle])
         raise "GetThumb Failed #{recv_pkt.payload.reason_code}" if recv_pkt.payload.response_code != PTP_RC_OK
         File.open("./theta_thumb.jpg", "wb") do |f|
             f.write(data.pack("C*"))
@@ -137,7 +158,7 @@ TCPSocket.open(ADDR, PORT) do |s|
         @transaction_id += 1
 
         print "GetObject...\n"
-        recv_pkt, data = data_operation(s, PTP_OC_GetObject, @transaction_id, [@object_handles[-1]])
+        recv_pkt, data = data_operation(s, PTP_OC_GetObject, @transaction_id, [@added_object_handle])
         raise "GetObject Failed #{recv_pkt.payload.reason_code}" if recv_pkt.payload.response_code != PTP_RC_OK
         File.open("./theta_pic.jpg", "wb") do |f|
             f.write(data.pack("C*"))

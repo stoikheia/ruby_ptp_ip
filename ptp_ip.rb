@@ -527,18 +527,18 @@ class PTPIP_payload_EVENT_PKT < PTPIP_payload
         end
         
         def parse_event_code(data)
-            raise "Invalid Data : parse_event_code" if data.length < 4
-            return data[0..3].pack("C*").unpack("S")[0];
+            raise "Invalid Data : parse_event_code" if data.length < 2
+            return data[0,2].pack("C*").unpack("S")[0]
         end
         
         def parse_transaction_id(data)
-            raise "Invalid Data : transaction_id" if data.length < 8
-            return data[4..7].pack("C*").unpack("L")[0];
+            raise "Invalid Data : parse_transaction_id" if data.length < 6
+            return data[2,4].pack("C*").unpack("L")[0]
         end
         
         def parse_parameters(data)
             raise "Invalid Data : parameters" if data.length > 18
-            return data[8..-1].pack("C*").unpack("L*");
+            return data[6..-1].pack("C*").unpack("L*")
         end
     end
     
