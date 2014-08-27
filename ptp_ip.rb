@@ -720,6 +720,19 @@ class PTPIP_payload_END_DATA_PKT < PTPIP_payload_DATA_PKT
             return data[4..-1];
         end
     end
+
+    def to_data
+        [@transaction_id].pack('L').unpack('C*')+
+        @data_payload
+    end
+
+    def to_hash
+        {
+        "Type"=>@type,
+        "TransactionID"=>@transaction_id,
+        "DataPayload(size)"=>@data_payload.size
+        }
+    end
 end
 
 
