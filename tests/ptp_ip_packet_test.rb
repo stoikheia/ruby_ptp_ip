@@ -109,4 +109,30 @@ class PTP_IP_packet_test < Test::Unit::TestCase
         assert_equal(Fixnum, payload.parameters[0].class)
         assert_equal(0x080001, payload.parameters[0])
     end
+
+    def test_create_end_data_packet_001
+        data = []
+        (0...300).each do |i|
+            data << i%256
+        end
+        
+        payload = PTPIP_payload_END_DATA_PKT.new()
+        payload.transaction_id = 1
+        payload.data_payload = data
+
+        packet = PTPIP_packet.create(payload)
+        
+        packet_bytes = packet.to_data
+        assert_equal(4 + 4 + 4 + 300, packet_bytes.length)
+        assert_equal(packet_bytes[0,4], [packet_bytes.length].pack("L").unpack("C*"))
+        assert_equal(packet_bytes[4,4], [0x0000000c].pack("L").unpack("C*"))
+        assert_equal(packet_bytes[8,4], [1].pack("L").unpack("C*"))
+        tmp = packet_bytes[12...-1]
+        count = 0
+        tmp.each do |byte|
+            assert_equal(count%256, byte)
+            count+=1
+        end
+        
+    end
 end
