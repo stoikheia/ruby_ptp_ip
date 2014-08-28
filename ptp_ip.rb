@@ -704,7 +704,7 @@ class PTPIP_payload_END_DATA_PKT < PTPIP_payload_DATA_PKT
     end
     
     class << self
-        def self.create(data)
+        def create(data)
             payload = new()
             payload.transaction_id = parse_transaction_id(data)
             payload.data_payload = parse_data_payload(data)
